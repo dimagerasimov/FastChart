@@ -390,12 +390,12 @@ public class FastChart extends JPanel{
                 plotArea(g, width, height, paddingLeft, paddingRight,
                     paddingBottom, paddingTop);
             }
+            showDecription(g, width - paddingRight, paddingTop, paddingRight,
+                    height - (paddingBottom + paddingTop), paddingRight * 0.75f);
         }
         showAxises(g, width, height, paddingLeft, paddingRight,
                 paddingBottom, paddingTop);
         showTitle(g, paddingLeft, 0, width - (paddingLeft + paddingRight), paddingTop);
-        showDecription(g, width - paddingRight, paddingTop, paddingRight,
-                height - (paddingBottom + paddingTop), paddingRight * 0.75f);
     }
     
     private final float titleFontWidthPx;

@@ -30,6 +30,32 @@ public class FastChartTest {
         
         assertTrue(true);
     }
+        
+    /**
+     * Test empty chart, of class FastChart.
+     */
+    @Test
+    public void testEmptyChart() {
+        System.out.println("Test of empty chart");
+        
+        try {
+            FastChart myChart = new FastChart();
+            myChart.sync();
+
+            myChart.setTitle("Empty chart test");
+            myChart.setAreaFlag(false);
+
+            // Check for invalid operation
+            myChart.setColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
+            myChart.setDescription(1, "-3+Cos(x)");
+            ///////////////////////////////
+            
+            myChart.setVisible(true);
+            showChart(myChart);
+        } catch(Exception ex) {
+            fail("The test failed.");
+        }
+    }   
     
     /**
      * Test line chart, of class FastChart.
