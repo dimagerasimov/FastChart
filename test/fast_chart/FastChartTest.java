@@ -6,6 +6,7 @@
 package fast_chart;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import javax.swing.JFrame;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -65,21 +66,21 @@ public class FastChartTest {
         System.out.println("Test of line chart");
         
         final int size = 100;
-        double x, step;
+        float x, step;
                 
-        XY[] points1 = new XY[size + 1];
-        step = (2 * Math.PI) / size;
-        x = -Math.PI;
+        ArrayList<XY<Float>> points1 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
         for(int i = 0; i < size + 1; i++) {
-            points1[i] = new XY(x, Math.sin(x * 3));
+            points1.add(new XY<>(x, (float)Math.sin(x * 3.0f)));
             x += step;
         }
         
-        XY[] points2 = new XY[size + 1];
-        step = (2 * Math.PI) / size;
-        x = -Math.PI;
+        ArrayList<XY<Float>> points2 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
         for(int i = 0; i < size + 1; i++) {
-            points2[i] = new XY(x, -3.0 + Math.cos(x));
+            points2.add(new XY<>(x, -3.0f + (float)Math.cos(x)));
             x += step;
         }
         
@@ -111,21 +112,21 @@ public class FastChartTest {
         System.out.println("Test of area chart");
         
         final int size = 100;
-        double x, step;
+        float x, step;
                 
-        XY[] points1 = new XY[size + 1];
-        step = (2 * Math.PI) / size;
-        x = -Math.PI;
+        ArrayList<XY<Float>> points1 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
         for(int i = 0; i < size + 1; i++) {
-            points1[i] = new XY(x, Math.sin(x * 3));
+            points1.add(new XY<>(x, (float)Math.sin(x * 3.0f)));
             x += step;
         }
         
-        XY[] points2 = new XY[size + 1];
-        step = (2 * Math.PI) / size;
-        x = -Math.PI;
+        ArrayList<XY<Float>> points2 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
         for(int i = 0; i < size + 1; i++) {
-            points2[i] = new XY(x, -3.0 + Math.cos(x));
+            points2.add(new XY<>(x, -3.0f + (float)Math.cos(x)));
             x += step;
         }
         
