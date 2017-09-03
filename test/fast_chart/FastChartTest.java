@@ -47,7 +47,7 @@ public class FastChartTest {
             myChart.setAreaFlag(false);
 
             // Check for invalid operation
-            myChart.setColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
+            myChart.setGraphicColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
             myChart.setDescription(1, "-3+Cos(x)");
             ///////////////////////////////
             
@@ -91,8 +91,8 @@ public class FastChartTest {
             myChart.setTitle("Line chart test");
             myChart.setAreaFlag(false);
 
-            myChart.setColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
-            myChart.setColor(1, Color.getHSBColor(0.5f, 0.5f, 0.5f));
+            myChart.setGraphicColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
+            myChart.setGraphicColor(1, Color.getHSBColor(0.5f, 0.5f, 0.5f));
 
             myChart.setDescription(0, "Sin(3x)");
             myChart.setDescription(1, "-3+Cos(x)");
@@ -137,8 +137,8 @@ public class FastChartTest {
             myChart.setTitle("Area chart test");
             myChart.setAreaFlag(true);
 
-            myChart.setColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
-            myChart.setColor(1, Color.getHSBColor(0.5f, 0.5f, 0.5f));
+            myChart.setGraphicColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
+            myChart.setGraphicColor(1, Color.getHSBColor(0.5f, 0.5f, 0.5f));
 
             myChart.setDescription(0, "Sin(3x)");
             myChart.setDescription(1, "-3+Cos(x)");
@@ -148,5 +148,52 @@ public class FastChartTest {
         } catch(Exception ex) {
             fail("The test failed.");
         }
-    }    
+    }
+    
+    /**
+     * Test line chart, of class FastChart.
+     */
+    @Test
+    public void testSelectedPointAlgorithm() {
+        System.out.println("Test of selected point algorithm");
+        
+        final int size = 20;
+        float x, step;
+                
+        ArrayList<XY<Float>> points1 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
+        for(int i = 0; i < size + 1; i++) {
+            points1.add(new XY<>(x, (float)Math.sin(x * 3.0f)));
+            x += step;
+        }
+        
+        ArrayList<XY<Float>> points2 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
+        for(int i = 0; i < size + 1; i++) {
+            points2.add(new XY<>(x, -1.0f + (float)Math.cos(2 * x)));
+            x += step;
+        }
+        
+        try {
+            FastChart myChart = new FastChart();
+            myChart.sync(points1, points2);
+
+            myChart.setTitle("Selected point algorithm");
+            myChart.setAreaFlag(false);
+
+            myChart.setSelectedPointColor(Color.YELLOW);
+            myChart.setGraphicColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
+            myChart.setGraphicColor(1, Color.getHSBColor(0.5f, 0.5f, 0.5f));
+
+            myChart.setDescription(0, "Sin(3x)");
+            myChart.setDescription(1, "-1+Cos(2x)");
+
+            myChart.setVisible(true);
+            showChart(myChart);
+        } catch(Exception ex) {
+            fail("The test failed.");
+        }
+    }      
 }
