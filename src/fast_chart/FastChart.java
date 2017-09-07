@@ -83,7 +83,11 @@ public class FastChart extends JPanel implements MouseMotionListener{
     public ChartLimits getLimits() {
         return new ChartLimits(limits);
     }
-     
+
+    public void setLimits(ChartLimits chartLimits) {
+        limits = new ChartLimits(chartLimits);
+    }
+
     public boolean setFormatValueAxisX(String format) {
         if(format == null) {
             return false;
@@ -193,11 +197,13 @@ public class FastChart extends JPanel implements MouseMotionListener{
     }
     
     private float convertXToScreenPx(int width, float x) {
-        return (x - limits.minX) / (limits.maxX - limits.minX) * width;
+        float tmp = (x - limits.minX) / (limits.maxX - limits.minX) * width;
+        return (tmp < 0.0f || tmp > width) ? 0.0f : tmp;
     }
     
     private float convertYToScreenPx(int height, float y) {
-        return (1.0f - (y - limits.minY) / (limits.maxY - limits.minY)) * height;
+        float tmp = (1.0f - (y - limits.minY) / (limits.maxY - limits.minY)) * height;
+        return (tmp < 0.0f || tmp > height) ? 0.0f : tmp;
     }
     
     private float convertScreenPxToX(int width, float x) {

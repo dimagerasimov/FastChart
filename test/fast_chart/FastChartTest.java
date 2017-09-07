@@ -5,6 +5,7 @@
  */
 package fast_chart;
 
+import fast_chart.FastChart.ChartLimits;
 import java.awt.Color;
 import java.util.ArrayList;
 import javax.swing.JFrame;
@@ -151,7 +152,7 @@ public class FastChartTest {
     }
     
     /**
-     * Test line chart, of class FastChart.
+     * Test selected point, of class FastChart.
      */
     @Test
     public void testSelectedPointAlgorithm() {
@@ -195,5 +196,51 @@ public class FastChartTest {
         } catch(Exception ex) {
             fail("The test failed.");
         }
-    }      
+    }  
+
+    /**
+     * Test set limits, of class FastChart.
+     */
+    @Test
+    public void testSetLimits() {
+        System.out.println("Test of setting of chart limits");
+        
+        final int size = 20;
+        float x, step;
+                
+        ArrayList<XY<Float>> points = new ArrayList<>(size + 1);
+        float rectLength = 5.0f;
+        step = rectLength / (size - 1);
+        points.add(new XY<>(0.0f, 0.0f));
+        x = 0.0f;
+        for(int i = 0; i < size; i++) {
+            points.add(new XY<>(x, 1.0f));
+            x += step;
+        }
+        points.add(new XY<>(rectLength, 0.0f));
+
+        try {
+            FastChart myChart = new FastChart();
+            myChart.sync(points);
+
+            myChart.setTitle("Set limits test");
+            myChart.setAreaFlag(true);
+
+            ChartLimits limits = myChart.getLimits();
+            limits.SetMaximumX(limits.GetMaximumX() + 0.1f * rectLength);
+            limits.SetMinimumX(limits.GetMinimumX() - 0.1f * rectLength);
+            limits.SetMaximumY(limits.GetMaximumY() + 0.5f * rectLength);
+            myChart.setLimits(limits);
+
+            myChart.setSelectedPointColor(Color.ORANGE);
+            myChart.setGraphicColor(0, Color.getHSBColor(0.0f, 0.8f, 0.6f));
+ 
+            myChart.setDescription(0, "rectangle");
+
+            myChart.setVisible(true);
+            showChart(myChart);
+        } catch(Exception ex) {
+            fail("The test failed.");
+        }
+    }    
 }
