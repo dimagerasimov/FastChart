@@ -27,12 +27,12 @@ public class FastChart extends JPanel implements MouseMotionListener{
         final int NOTHING_TO_SHOW_FONT_SIZE = 14;
         final int AXIS_FONT_SIZE = 12;
         final int DESCRIPTION_FONT_SIZE = 15;
-        
+
         titleFont = new Font(Font.DIALOG, Font.BOLD, TITLE_FONT_SIZE);
         nothingToShowFont = new Font(Font.DIALOG, Font.BOLD, NOTHING_TO_SHOW_FONT_SIZE);
         axisFont = new Font(Font.DIALOG, Font.PLAIN, AXIS_FONT_SIZE);
         descriptionFont = new Font(Font.DIALOG, Font.PLAIN, DESCRIPTION_FONT_SIZE);
-    
+
         TextLayout tl;
         tl = new TextLayout("Aa", titleFont, new FontRenderContext(null, true, true));
         titleFontWidthPx =  (float)tl.getBounds().getWidth() / 2.0f;
@@ -60,7 +60,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
         this.nothingToShowFont = nothingToShowFont;
         this.axisFont = axisFont;
         this.descriptionFont = descriptionFont;
-        
+
         TextLayout tl;
         tl = new TextLayout("Aa", titleFont, new FontRenderContext(null, true, true));
         titleFontWidthPx =  (float)tl.getBounds().getWidth() / 2.0f;
@@ -77,6 +77,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
         tl = new TextLayout("Aa", descriptionFont, new FontRenderContext(null, true, true));
         descriptionFontWidthPx = (float)tl.getBounds().getWidth() / 2.0f;
         descriptionFontHeightPx = (float)tl.getBounds().getHeight();
+
         clear();
     }
 
@@ -374,16 +375,64 @@ public class FastChart extends JPanel implements MouseMotionListener{
         final int heightOfPlot = rectangle.GetHeight() - (rectangle.GetPaddingBottom() + rectangle.GetPaddingTop());
         
         if(!graphics.isEmpty()) {
+            int sizeOfOval = (widthOfPlot < heightOfPlot) ? widthOfPlot : heightOfPlot;
+            sizeOfOval *= 0.025f;
+            XY<Float> point = graphics.get(selectedPoint.graphic_number).get(selectedPoint.point_number);
             Color color = selectedPointColor;
             g.setColor(color);
-            int sizeOfOval = (widthOfPlot < heightOfPlot) ? widthOfPlot : heightOfPlot;
-            sizeOfOval /= 30;
-            XY<Float> point = graphics.get(selectedPoint.graphic_number).get(selectedPoint.point_number);
             g.fillOval(rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, point.x) - sizeOfOval / 2,
+                    rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, point.y) - sizeOfOval / 2, sizeOfOval, sizeOfOval);
+            g.setColor(Color.lightGray);
+            g.drawOval(rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, point.x) - sizeOfOval / 2,
                     rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, point.y) - sizeOfOval / 2, sizeOfOval, sizeOfOval);
         }
     }
-    
+
+    private void DrawLabelSelectedPoint(Graphics g, ChartRectangle rectangle, SelectedPointInfo selectedPoint) {
+        final int widthOfPlot = rectangle.GetWidth() - (rectangle.GetPaddingLeft() + rectangle.GetPaddingRight());
+        final int heightOfPlot = rectangle.GetHeight() - (rectangle.GetPaddingBottom() + rectangle.GetPaddingTop());
+        
+        if(!graphics.isEmpty()) {
+            XY<Float> point = graphics.get(selectedPoint.graphic_number).get(selectedPoint.point_number);
+
+            final int SELECTED_POINT_LABEL_FONT_SIZE = 12;
+            final Font selectedPointLabelFont = new Font(Font.DIALOG, Font.PLAIN, SELECTED_POINT_LABEL_FONT_SIZE);
+
+            final String label = String.format(axisFormatValueX, point.x)
+                    + ", " + String.format(axisFormatValueY, point.y);
+            final TextLayout tl = new TextLayout(label, selectedPointLabelFont, new FontRenderContext(null, true, true));
+            final int widthOfText = (int)tl.getBounds().getWidth();
+            final int heightOfText = (int)(tl.getBounds().getHeight());
+            final int widthOfOneCharacter = widthOfText / label.length();
+            final int widthOfLabel = (int)(widthOfText * 1.4f);
+            final int heightOfLabel = (int)(heightOfText * 1.5f);
+  
+            int leftCornerX = (int)convertXToScreenPx(widthOfPlot, point.x) + (int)(widthOfLabel * 0.07f);
+            int leftCornerY = (int)convertYToScreenPx(heightOfPlot, point.y) - (int)(heightOfLabel);
+            if(leftCornerX + widthOfLabel > widthOfPlot) {
+                leftCornerX -= widthOfLabel;
+            }
+            if(leftCornerY - heightOfLabel < 0.0f) {
+                leftCornerY += heightOfLabel;
+            }
+            g.setColor(Color.WHITE);
+            g.fillRoundRect(rectangle.GetPaddingLeft() + leftCornerX,
+                    rectangle.GetPaddingTop() + leftCornerY, widthOfLabel, heightOfLabel,
+                    widthOfLabel / 10, widthOfLabel / 10);
+            g.setColor(Color.GRAY);
+            g.drawRoundRect(rectangle.GetPaddingLeft() + leftCornerX,
+                    rectangle.GetPaddingTop() + leftCornerY, widthOfLabel, heightOfLabel,
+                    widthOfLabel / 10, widthOfLabel / 10);
+
+            g.setFont(selectedPointLabelFont);
+            g.setColor(Color.BLACK);
+            g.drawString(label, rectangle.GetPaddingLeft() + leftCornerX
+                    + (widthOfLabel - widthOfText - widthOfOneCharacter) / 2,
+                    rectangle.GetPaddingTop() + leftCornerY + heightOfLabel
+                    - (heightOfLabel - heightOfText) / 2);
+        }
+    }
+
     private void showTitle(Graphics g, ChartRectangle rectangle) {
         int x, y, lengthX, lengthY;
         x = rectangle.GetPaddingLeft();
@@ -590,6 +639,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
         {
             if(currentSelectedPoint != null) {
                 DrawSelectedPoint(g, tmp_rect, currentSelectedPoint);
+                DrawLabelSelectedPoint(g, tmp_rect, currentSelectedPoint);
             }
         }
         chartRectangle = tmp_rect;
@@ -696,7 +746,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
     private final float axisFontHeightPx;
     private final float descriptionFontWidthPx;
     private final float descriptionFontHeightPx;
-    
+
     private final Font titleFont;
     private final Font nothingToShowFont;
     private final Font axisFont;
