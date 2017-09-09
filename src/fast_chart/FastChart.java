@@ -5,12 +5,14 @@
  */
 package fast_chart;
 
+import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.Font;
-import javax.swing.JPanel;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.util.ArrayList;
@@ -19,7 +21,7 @@ import java.util.ArrayList;
  *
  * @author UMKA
  */
-public class FastChart extends JPanel implements MouseMotionListener{
+public class FastChart extends JPanel implements MouseMotionListener, MouseWheelListener {
     public FastChart() {
         super();
         
@@ -82,11 +84,13 @@ public class FastChart extends JPanel implements MouseMotionListener{
     }
 
     public ChartLimits getLimits() {
-        return new ChartLimits(limits);
+        return new ChartLimits(currentLimits);
     }
 
     public void setLimits(ChartLimits chartLimits) {
-        limits = new ChartLimits(chartLimits);
+        originalLimits = new ChartLimits(chartLimits);
+        currentLimits = new ChartLimits(originalLimits);
+        repaint();
     }
 
     public boolean setFormatValueAxisX(String format) {
@@ -148,7 +152,8 @@ public class FastChart extends JPanel implements MouseMotionListener{
             clear();
             return false;
         }
-        limits = new ChartLimits(DEFAULT_CHART_LIMITS);
+        originalLimits = new ChartLimits(DEFAULT_CHART_LIMITS);
+        scaler = 1.0f;
         selectedPointColor = Color.blue;
         graphicColors = new ArrayList();
         graphics = new ArrayList();
@@ -162,22 +167,24 @@ public class FastChart extends JPanel implements MouseMotionListener{
             XY<Float> tmp;
             for (int j = 0; j < arrayXY.size(); j++) {
                 tmp = arrayXY.get(j);
-                if(tmp.x < limits.GetMinimumX()) {
-                    limits.SetMinimumX(tmp.x);
+                if(tmp.x < originalLimits.GetMinimumX()) {
+                    originalLimits.SetMinimumX(tmp.x);
                 }
-                if(tmp.x > limits.GetMaximumX()) {
-                    limits.SetMaximumX(tmp.x);
+                if(tmp.x > originalLimits.GetMaximumX()) {
+                    originalLimits.SetMaximumX(tmp.x);
                 }
-                if(tmp.y < limits.GetMinimumY()) {
-                    limits.SetMinimumY(tmp.y);
+                if(tmp.y < originalLimits.GetMinimumY()) {
+                    originalLimits.SetMinimumY(tmp.y);
                 }
-                if(tmp.y > limits.GetMaximumY()) {
-                    limits.SetMaximumY(tmp.y);
+                if(tmp.y > originalLimits.GetMaximumY()) {
+                    originalLimits.SetMaximumY(tmp.y);
                 }
             }
         }
+        currentLimits = new ChartLimits(originalLimits);
         if(!bMouseListenerExisted) {
             addMouseMotionListener(this);
+            addMouseWheelListener(this);
             bMouseListenerExisted = true;
         }
         return true;
@@ -189,7 +196,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
         
         areaFlag = false;
         title = "Fast Chart";   
-        limits = new ChartLimits(DEFAULT_CHART_LIMITS);
+        originalLimits = currentLimits = null;
         
         selectedPointColor = null;
         graphicColors = null;
@@ -198,21 +205,19 @@ public class FastChart extends JPanel implements MouseMotionListener{
     }
     
     private float convertXToScreenPx(int width, float x) {
-        float tmp = (x - limits.minX) / (limits.maxX - limits.minX) * width;
-        return (tmp < 0.0f || tmp > width) ? 0.0f : tmp;
+        return (x - currentLimits.minX) / (currentLimits.maxX - currentLimits.minX) * width;
     }
     
     private float convertYToScreenPx(int height, float y) {
-        float tmp = (1.0f - (y - limits.minY) / (limits.maxY - limits.minY)) * height;
-        return (tmp < 0.0f || tmp > height) ? 0.0f : tmp;
+        return (1.0f - (y - currentLimits.minY) / (currentLimits.maxY - currentLimits.minY)) * height;
     }
     
     private float convertScreenPxToX(int width, float x) {
-        return limits.minX + x / width * (limits.maxX - limits.minX);
+        return currentLimits.minX + x / width * (currentLimits.maxX - currentLimits.minX);
     }
     
     private float convertScreenPxToY(int height, float y) {
-        return limits.maxY - y / height * (limits.maxY - limits.minY);
+        return currentLimits.maxY - y / height * (currentLimits.maxY - currentLimits.minY);
     }
     
     private void plot(Graphics g, ChartRectangle rectangle) {
@@ -228,18 +233,35 @@ public class FastChart extends JPanel implements MouseMotionListener{
                 //We can't draw what doesn't exist
                 continue;
             }
-            int[] xs = new int[points.size()]; 
-            for(int j = 0; j < xs.length; j++) {
-                xs[j] = rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, points.get(j).x);
-            }
-            
+            float tmpX, tmpY;
+            int[] xs = new int[points.size()];
             int[] ys = new int[points.size()];
-            for(int j = 0; j < ys.length; j++) {
-                ys[j] = rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, points.get(j).y);
+            int realSize = 0;
+            boolean validX, validY;
+            for(int j = 0; j < points.size(); j++) {
+                tmpX = convertXToScreenPx(widthOfPlot, points.get(j).x);
+                tmpY = convertYToScreenPx(heightOfPlot, points.get(j).y);
+                validX = (tmpX >= 0.0f) && (tmpX <= widthOfPlot);
+                validY = (tmpY >= 0.0f) && (tmpY <= heightOfPlot);
+                if(validX || validY) {
+                    if(!validX) {
+                        tmpX = (tmpX < 0.0f) ? 0.0f : widthOfPlot;
+                    }
+                    if(!validY) {
+                        tmpY = (tmpY < 0.0f) ? 0.0f : heightOfPlot;
+                    }
+                    xs[realSize] = rectangle.GetPaddingLeft() + (int)tmpX;
+                    ys[realSize] = rectangle.GetPaddingTop() + (int)tmpY;
+                    realSize++;
+                }
             }
-
+            if(realSize < 2)
+            {
+                //We can't draw what doesn't exist
+                continue;
+            }
             g.setColor(color);
-            g.drawPolyline(xs, ys, xs.length);
+            g.drawPolyline(xs, ys, realSize);
         }
     }
     
@@ -256,22 +278,42 @@ public class FastChart extends JPanel implements MouseMotionListener{
                 //We can't draw what doesn't exist
                 continue;
             }
-            int[] xs = new int[points.size() + 2]; 
-            for(int j = 0; j < xs.length - 2; j++) {
-                xs[j] = rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, points.get(j).x);
-            }
-            xs[xs.length - 2] = rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, points.get(xs.length - 3).x);
-            xs[xs.length - 1] = rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, points.get(0).x);
-
+            float tmpX, tmpY;
+            int realSize = 0;
+            int[] xs = new int[points.size() + 2];
             int[] ys = new int[points.size() + 2];
-            for(int j = 0; j < ys.length - 2; j++) {
-                ys[j] = rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, points.get(j).y);
+            boolean validX, validY;
+            for(int j = 0; j < points.size(); j++) {
+                tmpX = convertXToScreenPx(widthOfPlot, points.get(j).x);
+                tmpY = convertYToScreenPx(heightOfPlot, points.get(j).y);
+                validX = (tmpX >= 0.0f) && (tmpX <= widthOfPlot);
+                validY = (tmpY >= 0.0f) && (tmpY <= heightOfPlot);
+                if(validX || validY) {
+                    if(!validX) {
+                        tmpX = (tmpX < 0.0f) ? 0.0f : widthOfPlot;
+                    }
+                    if(!validY) {
+                        tmpY = (tmpY < 0.0f) ? 0.0f : heightOfPlot;
+                    }
+                    xs[realSize] = rectangle.GetPaddingLeft() + (int)tmpX;
+                    ys[realSize] = rectangle.GetPaddingTop() + (int)tmpY;
+                    realSize++;
+                }
             }
-            ys[ys.length - 2] = rectangle.GetPaddingTop() + heightOfPlot;
-            ys[ys.length - 1] = rectangle.GetPaddingTop() + heightOfPlot;
+            if(realSize < 2)
+            {
+                //We can't draw what doesn't exist
+                continue;
+            }
+            xs[realSize] = xs[realSize - 1];
+            ys[realSize] = rectangle.GetPaddingTop() + heightOfPlot;
+            realSize += 1;
+            xs[realSize] = xs[0];
+            ys[realSize] = rectangle.GetPaddingTop() + heightOfPlot;
+            realSize += 1;
 
             g.setColor(color);
-            g.fillPolygon(xs, ys, xs.length);
+            g.fillPolygon(xs, ys, realSize);
         }
     }
 
@@ -294,6 +336,26 @@ public class FastChart extends JPanel implements MouseMotionListener{
                 chartRectangle.GetHeight() - (chartRectangle.GetPaddingTop() + chartRectangle.GetPaddingTop()));
         }
         currentSelectedPoint = newSelectedPoint;
+    }
+
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        float scalerCoeff = 1.0f + e.getWheelRotation() * 0.1f;
+        float newScaler = scaler * scalerCoeff;
+        if(newScaler < 0.33f) {
+            newScaler = 0.33f;
+        }
+        else if(newScaler < 1.0f) {
+            currentLimits.Scale(scalerCoeff);
+        }
+        else {
+            newScaler = 1.0f;
+            currentLimits = new ChartLimits(originalLimits);
+        }
+        if(newScaler != scaler) {
+            repaint();
+        }
+        scaler = newScaler;
     }
 
     private static SelectedPointInfo SelectedPointSearchAlgorithm(
@@ -341,8 +403,8 @@ public class FastChart extends JPanel implements MouseMotionListener{
 
         final int size = graphics.size();
  
-        float maxDistance = (limits.maxX - limits.minX) < (limits.maxY - limits.minY)
-            ? (limits.maxX - limits.minX) : (limits.maxY - limits.minY);
+        float maxDistance = (currentLimits.maxX - currentLimits.minX) < (currentLimits.maxY - currentLimits.minY)
+            ? (currentLimits.maxX - currentLimits.minX) : (currentLimits.maxY - currentLimits.minY);
         maxDistance *= 0.05f;
         SelectedPointInfo[] selectedPoints = new SelectedPointInfo[size];
         for(int i = 0; i < size; i++) {
@@ -537,7 +599,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
         // Coefficients scaling of labels
         final int NUM_AXIS_X_LABELS = (int)Math.ceil((rectangle.GetWidth()
                 - (rectangle.GetPaddingLeft() + rectangle.GetPaddingRight()))
-                / (Math.max(getWordWidthAxisX(limits.minX), getWordWidthAxisX(limits.maxX)) * 3));
+                / (Math.max(getWordWidthAxisX(currentLimits.minX), getWordWidthAxisX(currentLimits.maxX)) * 3));
         final int NUM_AXIS_Y_LABELS = (int)Math.ceil((rectangle.GetHeight()
                 - (rectangle.GetPaddingBottom() + rectangle.GetPaddingTop())) / (axisFontHeightPx * 6));
         
@@ -547,15 +609,15 @@ public class FastChart extends JPanel implements MouseMotionListener{
     
     private void showAxisX(Graphics g, ChartRectangle rectangle, int numLabels) {
         final int widthOfPlot = rectangle.GetWidth() - (rectangle.GetPaddingLeft() + rectangle.GetPaddingRight());
-        float step = (limits.maxX - limits.minX) / numLabels;
-        final float stepInPx = (float)convertXToScreenPx(widthOfPlot, limits.minX + step);
+        float step = (currentLimits.maxX - currentLimits.minX) / numLabels;
+        final float stepInPx = (float)convertXToScreenPx(widthOfPlot, currentLimits.minX + step);
         step = Math.abs(step);
         
         final int labelLocationY = (int)(rectangle.GetHeight() - (0.5f * rectangle.GetPaddingBottom()) + axisFontHeightPx / 2.0f);
         float labelLocationX = rectangle.GetPaddingLeft();
         
-        float sum = limits.minX;
-        if(!limits.equals(DEFAULT_CHART_LIMITS)) {
+        float sum = currentLimits.minX;
+        if(!currentLimits.equals(DEFAULT_CHART_LIMITS)) {
             for(int i = 0; i < numLabels + 1; i++) {
                 g.drawString(getWordAxisX(sum),
                         (int)(labelLocationX - getWordWidthAxisX(sum) / 2.0f), labelLocationY);
@@ -567,15 +629,15 @@ public class FastChart extends JPanel implements MouseMotionListener{
     
     private void showAxisY(Graphics g, ChartRectangle rectangle, int numLabels) {
         final int heightOfPlot = rectangle.GetHeight() - (rectangle.GetPaddingBottom() + rectangle.GetPaddingTop());
-        float step = (limits.maxY - limits.minY) / numLabels;
-        final float stepInPx = (float)(heightOfPlot - convertYToScreenPx(heightOfPlot, limits.minY + step));
+        float step = (currentLimits.maxY - currentLimits.minY) / numLabels;
+        final float stepInPx = (float)(heightOfPlot - convertYToScreenPx(heightOfPlot, currentLimits.minY + step));
         step = Math.abs(step);
         
         final int labelLocationX = (int)(rectangle.GetPaddingLeft() / 2.0f);
         float labelLocationY = rectangle.GetHeight() - rectangle.GetPaddingBottom() + axisFontHeightPx / 2.0f;
                 
-        float sum = limits.minY;
-        if(!limits.equals(DEFAULT_CHART_LIMITS)) {
+        float sum = currentLimits.minY;
+        if(!currentLimits.equals(DEFAULT_CHART_LIMITS)) {
             for(int i = 0; i < numLabels + 1; i++) {
                 g.drawString(getWordAxisY(sum),
                         (int)(labelLocationX - getWordWidthAxisY(sum) / 2.0f), (int)labelLocationY);
@@ -598,11 +660,11 @@ public class FastChart extends JPanel implements MouseMotionListener{
         int paddingTop = (int)(0.05f * height);
         
         int tmp;
-        tmp = (int)(1.5f * Math.max(getWordWidthAxisY(limits.minY), getWordWidthAxisY(limits.maxY)));
+        tmp = (int)(1.5f * Math.max(getWordWidthAxisY(currentLimits.minY), getWordWidthAxisY(currentLimits.maxY)));
         if(paddingLeft < tmp) {
             paddingLeft = tmp;
         }
-        tmp = (int)(2.5f * Math.max(getWordWidthAxisY(limits.minY), getWordWidthAxisY(limits.maxY)));
+        tmp = (int)(2.5f * Math.max(getWordWidthAxisY(currentLimits.minY), getWordWidthAxisY(currentLimits.maxY)));
         if(paddingRight < tmp) {
             paddingRight = tmp;
         }   
@@ -617,10 +679,8 @@ public class FastChart extends JPanel implements MouseMotionListener{
         
         ChartRectangle tmp_rect = new ChartRectangle(width, height, paddingLeft,
             paddingRight, paddingBottom, paddingTop);
-        //Clear only a field with the graphic (without borders)
-        g.clearRect(tmp_rect.GetPaddingLeft(), tmp_rect.GetPaddingTop(),
-                tmp_rect.GetWidth() - (tmp_rect.GetPaddingLeft() + tmp_rect.GetPaddingRight()),
-                tmp_rect.GetHeight() - (tmp_rect.GetPaddingTop() + tmp_rect.GetPaddingTop()));
+        //Clear all drawing panel
+        g.clearRect(0, 0, tmp_rect.GetWidth(), tmp_rect.GetHeight());
         if(graphics != null) {
             if(!areaFlag) {
                 plot(g, tmp_rect);
@@ -631,7 +691,7 @@ public class FastChart extends JPanel implements MouseMotionListener{
         }
         showAxises(g, tmp_rect);
         showTitle(g, tmp_rect);
-        if(limits.equals(DEFAULT_CHART_LIMITS))
+        if(currentLimits.equals(DEFAULT_CHART_LIMITS))
         {
             showNothingToShowMsg(g, tmp_rect);
         }
@@ -698,6 +758,17 @@ public class FastChart extends JPanel implements MouseMotionListener{
             return (minX == object.minX) && (maxX == object.maxX)
                     && (minY == object.minY) && (maxY == object.maxY);
         }
+        public void Scale(float scaler) {
+            float tmp, postScaler, factor;
+            factor = (scaler < 1.0f) ? -1.0f : 1.0f;
+            postScaler = Math.abs(scaler - 1.0f);
+            tmp = (maxX - minX) * postScaler;
+            minX -= factor * tmp;
+            maxX += factor * tmp;
+            tmp = (maxY - minY) * postScaler;
+            minY -= factor * tmp;
+            maxY += factor * tmp;
+        }
     };
 
     private static class ChartRectangle {
@@ -756,8 +827,9 @@ public class FastChart extends JPanel implements MouseMotionListener{
     private static final String NOTHING_TO_SHOW_MSG = "nothing to show";
     private static final ChartLimits DEFAULT_CHART_LIMITS = new ChartLimits(
         Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY);
-    private ChartLimits limits;
-
+    private ChartLimits currentLimits;
+    private ChartLimits originalLimits;
+    private float scaler;
     private int mouseX, mouseY;
     private Color selectedPointColor;
     private SelectedPointInfo currentSelectedPoint;
