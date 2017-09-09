@@ -235,35 +235,16 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
                 //We can't draw what doesn't exist
                 continue;
             }
-            float tmpX, tmpY;
-            int[] xs = new int[points.size()];
-            int[] ys = new int[points.size()];
-            int realSize = 0;
-            boolean validX, validY;
-            for(int j = 0; j < points.size(); j++) {
-                tmpX = convertXToScreenPx(widthOfPlot, points.get(j).x);
-                tmpY = convertYToScreenPx(heightOfPlot, points.get(j).y);
-                validX = (tmpX >= 0.0f) && (tmpX <= widthOfPlot);
-                validY = (tmpY >= 0.0f) && (tmpY <= heightOfPlot);
-                if(validX || validY) {
-                    if(!validX) {
-                        tmpX = (tmpX < 0.0f) ? 0.0f : widthOfPlot;
-                    }
-                    if(!validY) {
-                        tmpY = (tmpY < 0.0f) ? 0.0f : heightOfPlot;
-                    }
-                    xs[realSize] = rectangle.GetPaddingLeft() + (int)tmpX;
-                    ys[realSize] = rectangle.GetPaddingTop() + (int)tmpY;
-                    realSize++;
-                }
+            int[] xs = new int[points.size()]; 
+            for(int j = 0; j < xs.length; j++) {
+                xs[j] = rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, points.get(j).x);
             }
-            if(realSize < 2)
-            {
-                //We can't draw what doesn't exist
-                continue;
+            int[] ys = new int[points.size()];
+            for(int j = 0; j < ys.length; j++) {
+                ys[j] = rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, points.get(j).y);
             }
             g.setColor(color);
-            g.drawPolyline(xs, ys, realSize);
+            g.drawPolyline(xs, ys, xs.length);
         }
     }
     
@@ -280,42 +261,22 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
                 //We can't draw what doesn't exist
                 continue;
             }
-            float tmpX, tmpY;
-            int realSize = 0;
-            int[] xs = new int[points.size() + 2];
+            int[] xs = new int[points.size() + 2]; 
+            for(int j = 0; j < xs.length - 2; j++) {
+                xs[j] = rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, points.get(j).x);
+            }
+            xs[xs.length - 2] = xs[xs.length - 3];
+            xs[xs.length - 1] = xs[0];
+
             int[] ys = new int[points.size() + 2];
-            boolean validX, validY;
-            for(int j = 0; j < points.size(); j++) {
-                tmpX = convertXToScreenPx(widthOfPlot, points.get(j).x);
-                tmpY = convertYToScreenPx(heightOfPlot, points.get(j).y);
-                validX = (tmpX >= 0.0f) && (tmpX <= widthOfPlot);
-                validY = (tmpY >= 0.0f) && (tmpY <= heightOfPlot);
-                if(validX || validY) {
-                    if(!validX) {
-                        tmpX = (tmpX < 0.0f) ? 0.0f : widthOfPlot;
-                    }
-                    if(!validY) {
-                        tmpY = (tmpY < 0.0f) ? 0.0f : heightOfPlot;
-                    }
-                    xs[realSize] = rectangle.GetPaddingLeft() + (int)tmpX;
-                    ys[realSize] = rectangle.GetPaddingTop() + (int)tmpY;
-                    realSize++;
-                }
+            for(int j = 0; j < ys.length - 2; j++) {
+                ys[j] = rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, points.get(j).y);
             }
-            if(realSize < 2)
-            {
-                //We can't draw what doesn't exist
-                continue;
-            }
-            xs[realSize] = xs[realSize - 1];
-            ys[realSize] = rectangle.GetPaddingTop() + heightOfPlot;
-            realSize += 1;
-            xs[realSize] = xs[0];
-            ys[realSize] = rectangle.GetPaddingTop() + heightOfPlot;
-            realSize += 1;
+            ys[ys.length - 2] = rectangle.GetPaddingTop() + heightOfPlot;
+            ys[ys.length - 1] = rectangle.GetPaddingTop() + heightOfPlot;
 
             g.setColor(color);
-            g.fillPolygon(xs, ys, realSize);
+            g.fillPolygon(xs, ys, xs.length);
         }
     }
 
@@ -684,11 +645,15 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         //Clear all drawing panel
         g.clearRect(0, 0, tmp_rect.GetWidth(), tmp_rect.GetHeight());
         if(graphics != null) {
+            g.setClip(tmp_rect.GetPaddingLeft(), tmp_rect.GetPaddingTop(),
+                tmp_rect.GetWidth() - (tmp_rect.GetPaddingLeft() + tmp_rect.GetPaddingRight()),
+                tmp_rect.GetHeight() - (tmp_rect.GetPaddingTop() + tmp_rect.GetPaddingTop()));
             if(!areaFlag) {
                 plot(g, tmp_rect);
             } else {
                 plotArea(g, tmp_rect);
             }
+            g.setClip(0, 0, tmp_rect.GetWidth(), tmp_rect.GetHeight());
             showDecription(g, tmp_rect, tmp_rect.GetPaddingRight() * 0.75f);
         }
         showAxises(g, tmp_rect);
