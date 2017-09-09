@@ -150,6 +150,8 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
     public boolean sync(ArrayList<XY<Float>>... points) {         
         if(points == null || points.length < 1) {
             clear();
+            originalLimits = new ChartLimits(DEFAULT_CHART_LIMITS);
+            currentLimits = new ChartLimits(originalLimits);
             return false;
         }
         originalLimits = new ChartLimits(DEFAULT_CHART_LIMITS);
