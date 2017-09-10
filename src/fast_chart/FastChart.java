@@ -280,12 +280,52 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         }
     }
 
+    private void FixBorders() {
+        float tmpDiffX, tmpDiffY;
+        if(currentLimits.GetMinimumX() < originalLimits.GetMinimumX()) {
+            tmpDiffX = originalLimits.GetMinimumX() - currentLimits.GetMinimumX();
+            currentLimits.Move(tmpDiffX, 0.0f);
+        }
+        else if(currentLimits.GetMaximumX() > originalLimits.GetMaximumX()) {
+            tmpDiffX = currentLimits.GetMaximumX() - originalLimits.GetMaximumX();
+            currentLimits.Move(-tmpDiffX, 0.0f);
+        }
+        if(currentLimits.GetMinimumY() < originalLimits.GetMinimumY()) {
+            tmpDiffY = originalLimits.GetMinimumY() - currentLimits.GetMinimumY();
+            currentLimits.Move(0.0f, tmpDiffY);
+        }
+        else if(currentLimits.GetMaximumY() > originalLimits.GetMaximumY()) {
+            tmpDiffY = currentLimits.GetMaximumY() - originalLimits.GetMaximumY();
+            currentLimits.Move(0.0f, -tmpDiffY);
+        }
+    }
+
     @Override
     public void mouseDragged(MouseEvent e) {
+        int x = e.getX();
+        int y = e.getY();
+        x -= chartRectangle.paddingLeft;
+        y -= chartRectangle.paddingTop;
+        int widthOfChart = chartRectangle.width - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight());
+        int heightOfChart = chartRectangle.height - (chartRectangle.GetPaddingTop() + chartRectangle.GetPaddingBottom());
+        if(bMouseDraggedEvent && x >= 0 && x < widthOfChart && y >= 0 && y < heightOfChart) {
+            currentLimits.Move(convertScreenPxToX(widthOfChart, mouseX) - convertScreenPxToX(widthOfChart, x),
+                    convertScreenPxToY(heightOfChart, mouseY) - convertScreenPxToY(heightOfChart, y));
+            FixBorders();
+            repaint(chartRectangle.GetPaddingLeft(), chartRectangle.GetPaddingTop(),
+                chartRectangle.GetWidth() - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight()),
+                chartRectangle.GetHeight() - (chartRectangle.GetPaddingTop() + chartRectangle.GetPaddingTop()));
+        }
+        else {
+            bMouseDraggedEvent = true;
+        }
+        mouseX = x;
+        mouseY = y;
     }
 
     @Override
     public void mouseMoved(MouseEvent e) {
+        bMouseDraggedEvent = false;
         mouseX = e.getX();
         mouseY = e.getY();
         
@@ -305,11 +345,23 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
     public void mouseWheelMoved(MouseWheelEvent e) {
         float scalerCoeff = 1.0f + e.getWheelRotation() * 0.1f;
         float newScaler = scaler * scalerCoeff;
-        if(newScaler < 0.33f) {
-            newScaler = 0.33f;
+        if(newScaler < 0.2f) {
+            newScaler = 0.2f;
         }
         else if(newScaler < 1.0f) {
-            currentLimits.Scale(scalerCoeff);
+            int x = e.getX();
+            int y = e.getY();
+            x -= chartRectangle.paddingLeft;
+            y -= chartRectangle.paddingTop;
+            int widthOfChart = chartRectangle.width - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight());
+            int heightOfChart = chartRectangle.height - (chartRectangle.GetPaddingTop() + chartRectangle.GetPaddingBottom());
+            if(x >= 0 && x < widthOfChart && y >= 0 && y < heightOfChart) {
+                currentLimits.Scale(scalerCoeff, (float)x / widthOfChart, (float)y / heightOfChart);
+                FixBorders();
+            }
+            else {
+                newScaler = scaler;
+            }
         }
         else {
             newScaler = 1.0f;
@@ -653,6 +705,10 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
             } else {
                 plotArea(g, tmp_rect);
             }
+            if(currentSelectedPoint != null) {
+                DrawSelectedPoint(g, tmp_rect, currentSelectedPoint);
+                DrawLabelSelectedPoint(g, tmp_rect, currentSelectedPoint);
+            }
             g.setClip(0, 0, tmp_rect.GetWidth(), tmp_rect.GetHeight());
             showDecription(g, tmp_rect, tmp_rect.GetPaddingRight() * 0.75f);
         }
@@ -661,13 +717,6 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         if(currentLimits.equals(DEFAULT_CHART_LIMITS))
         {
             showNothingToShowMsg(g, tmp_rect);
-        }
-        else //something additional to show
-        {
-            if(currentSelectedPoint != null) {
-                DrawSelectedPoint(g, tmp_rect, currentSelectedPoint);
-                DrawLabelSelectedPoint(g, tmp_rect, currentSelectedPoint);
-            }
         }
         chartRectangle = tmp_rect;
     }
@@ -725,16 +774,22 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
             return (minX == object.minX) && (maxX == object.maxX)
                     && (minY == object.minY) && (maxY == object.maxY);
         }
-        public void Scale(float scaler) {
+        public void Scale(float scaler, float lrCoeff, float btCoeff) {
             float tmp, postScaler, factor;
             factor = (scaler < 1.0f) ? -1.0f : 1.0f;
             postScaler = Math.abs(scaler - 1.0f);
             tmp = (maxX - minX) * postScaler;
-            minX -= factor * tmp;
-            maxX += factor * tmp;
+            minX -= factor * lrCoeff * tmp;
+            maxX += factor * (1.0f - lrCoeff) * tmp;
             tmp = (maxY - minY) * postScaler;
-            minY -= factor * tmp;
-            maxY += factor * tmp;
+            minY -= factor * (1.0f - btCoeff) * tmp;
+            maxY += factor * btCoeff * tmp;
+        }
+        public void Move(float offsetX, float offsetY) {
+            minX += offsetX;
+            maxX += offsetX;
+            minY += offsetY;
+            maxY += offsetY;
         }
     };
 
@@ -796,6 +851,8 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY);
     private ChartLimits currentLimits;
     private ChartLimits originalLimits;
+
+    private boolean bMouseDraggedEvent;
     private float scaler;
     private int mouseX, mouseY;
     private Color selectedPointColor;
