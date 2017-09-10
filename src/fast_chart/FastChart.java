@@ -88,9 +88,24 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
     }
 
     public void setLimits(ChartLimits chartLimits) {
-        originalLimits = new ChartLimits(chartLimits);
-        currentLimits = new ChartLimits(originalLimits);
-        repaint();
+        if(!originalLimits.equals(ChartLimits.NO_LIMITS)) {
+            originalLimits = new ChartLimits(chartLimits);
+            currentLimits = new ChartLimits(originalLimits);
+            repaint();
+        }
+    }
+
+    public void ScaleLimits(float scalerMinX, float scalerMaxX, float scalerMinY, float scalerMaxY) {
+        if(scalerMinX > 0.0f && scalerMaxX > 0.0f && scalerMinY > 0.0f && scalerMaxY > 0.0f) {
+            ChartLimits chartLimits = getLimits();
+            float diffX = chartLimits.GetMaximumX() - chartLimits.GetMinimumX();
+            chartLimits.SetMinimumX(chartLimits.GetMinimumX() - (scalerMinX - 1.0f) * diffX);
+            chartLimits.SetMaximumX(chartLimits.GetMaximumX() + (scalerMaxX - 1.0f) * diffX);
+            float diffY = chartLimits.GetMaximumY() - chartLimits.GetMinimumY();
+            chartLimits.SetMinimumY(chartLimits.GetMinimumY() - (scalerMinY - 1.0f) * diffY);
+            chartLimits.SetMaximumY(chartLimits.GetMaximumY() + (scalerMaxY - 1.0f) * diffY);
+            setLimits(chartLimits);
+        }
     }
 
     public boolean setFormatValueAxisX(String format) {
@@ -150,11 +165,11 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
     public boolean sync(ArrayList<XY<Float>>... points) {         
         if(points == null || points.length < 1) {
             clear();
-            originalLimits = new ChartLimits(DEFAULT_CHART_LIMITS);
+            originalLimits = new ChartLimits(ChartLimits.NO_LIMITS);
             currentLimits = new ChartLimits(originalLimits);
             return false;
         }
-        originalLimits = new ChartLimits(DEFAULT_CHART_LIMITS);
+        originalLimits = new ChartLimits(ChartLimits.NO_LIMITS);
         scaler = 1.0f;
         selectedPointColor = Color.blue;
         graphicColors = new ArrayList();
@@ -165,21 +180,28 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
                     0.3f + (float)Math.random() * 0.5f, 0.3f + (float)Math.random() * 0.5f));
             graphics.add(arrayXY);
             descriptions.add("Chart" + (descriptions.size() + 1));
-            
+
+            if(arrayXY.size() < 2) {
+                continue;
+            }
             XY<Float> tmp;
             for (int j = 0; j < arrayXY.size(); j++) {
                 tmp = arrayXY.get(j);
                 if(tmp.x < originalLimits.GetMinimumX()) {
-                    originalLimits.SetMinimumX(tmp.x);
+                    //Directly access to value
+                    originalLimits.minX = tmp.x;
                 }
                 if(tmp.x > originalLimits.GetMaximumX()) {
-                    originalLimits.SetMaximumX(tmp.x);
+                    //Directly access to value
+                    originalLimits.maxX = tmp.x;
                 }
                 if(tmp.y < originalLimits.GetMinimumY()) {
-                    originalLimits.SetMinimumY(tmp.y);
+                    //Directly access to value
+                    originalLimits.minY = tmp.y;
                 }
                 if(tmp.y > originalLimits.GetMaximumY()) {
-                    originalLimits.SetMaximumY(tmp.y);
+                    //Directly access to value
+                    originalLimits.maxY = tmp.y;
                 }
             }
         }
@@ -459,7 +481,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
             g.setColor(color);
             g.fillOval(rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, point.x) - sizeOfOval / 2,
                     rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, point.y) - sizeOfOval / 2, sizeOfOval, sizeOfOval);
-            g.setColor(Color.lightGray);
+            g.setColor(Color.GRAY);
             g.drawOval(rectangle.GetPaddingLeft() + (int)convertXToScreenPx(widthOfPlot, point.x) - sizeOfOval / 2,
                     rectangle.GetPaddingTop() + (int)convertYToScreenPx(heightOfPlot, point.y) - sizeOfOval / 2, sizeOfOval, sizeOfOval);
         }
@@ -632,7 +654,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         float labelLocationX = rectangle.GetPaddingLeft();
         
         float sum = currentLimits.minX;
-        if(!currentLimits.equals(DEFAULT_CHART_LIMITS)) {
+        if(!currentLimits.equals(ChartLimits.NO_LIMITS)) {
             for(int i = 0; i < numLabels + 1; i++) {
                 g.drawString(getWordAxisX(sum),
                         (int)(labelLocationX - getWordWidthAxisX(sum) / 2.0f), labelLocationY);
@@ -652,7 +674,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         float labelLocationY = rectangle.GetHeight() - rectangle.GetPaddingBottom() + axisFontHeightPx / 2.0f;
                 
         float sum = currentLimits.minY;
-        if(!currentLimits.equals(DEFAULT_CHART_LIMITS)) {
+        if(!currentLimits.equals(ChartLimits.NO_LIMITS)) {
             for(int i = 0; i < numLabels + 1; i++) {
                 g.drawString(getWordAxisY(sum),
                         (int)(labelLocationX - getWordWidthAxisY(sum) / 2.0f), (int)labelLocationY);
@@ -714,7 +736,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         }
         showAxises(g, tmp_rect);
         showTitle(g, tmp_rect);
-        if(currentLimits.equals(DEFAULT_CHART_LIMITS))
+        if(currentLimits.equals(ChartLimits.NO_LIMITS))
         {
             showNothingToShowMsg(g, tmp_rect);
         }
@@ -728,11 +750,9 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
     }
 
     public static class ChartLimits {
-        private float minX;
-        private float maxX;
-        private float minY;
-        private float maxY;
-        
+        public static final ChartLimits NO_LIMITS = new ChartLimits(
+            Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY);
+
         public ChartLimits(float minX, float maxX, float minY, float maxY) {
             this.minX = minX;
             this.maxX = maxX;
@@ -758,39 +778,55 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         public float GetMaximumY() {
             return maxY;
         }
-        public void SetMinimumX(float minX) {
-            this.minX = minX;
+        public void SetMinimumX(float x) {
+            if(minX != NO_LIMITS.minX) {
+                minX = x;
+            }
         }
-        public void SetMaximumX(float maxX) {
-            this.maxX = maxX;
+        public void SetMaximumX(float x) {
+            if(maxX != NO_LIMITS.maxX) {
+                maxX = x;
+            }
         }
-        public void SetMinimumY(float minY) {
-            this.minY = minY;
+        public void SetMinimumY(float y) {
+            if(minY != NO_LIMITS.minY) {
+                minY = y;
+            }
         }
-        public void SetMaximumY(float maxY) {
-            this.maxY = maxY;
+        public void SetMaximumY(float y) {
+            if(maxY != NO_LIMITS.maxY) {
+                maxY = y;
+            }
         }
         public boolean equals(ChartLimits object) {
             return (minX == object.minX) && (maxX == object.maxX)
                     && (minY == object.minY) && (maxY == object.maxY);
         }
         public void Scale(float scaler, float lrCoeff, float btCoeff) {
-            float tmp, postScaler, factor;
-            factor = (scaler < 1.0f) ? -1.0f : 1.0f;
-            postScaler = Math.abs(scaler - 1.0f);
-            tmp = (maxX - minX) * postScaler;
-            minX -= factor * lrCoeff * tmp;
-            maxX += factor * (1.0f - lrCoeff) * tmp;
-            tmp = (maxY - minY) * postScaler;
-            minY -= factor * (1.0f - btCoeff) * tmp;
-            maxY += factor * btCoeff * tmp;
+            if(scaler > 0.0f && lrCoeff >= 0.0f && lrCoeff <= 1.0f
+                    && btCoeff >= 0.0f && btCoeff <= 1.0f) {
+                float tmp, postScaler, factor;
+                factor = (scaler < 1.0f) ? -1.0f : 1.0f;
+                postScaler = Math.abs(scaler - 1.0f);
+                tmp = (GetMaximumX() - GetMinimumX()) * postScaler;
+                SetMinimumX(GetMinimumX() - factor * lrCoeff * tmp);
+                SetMaximumX(GetMaximumX() + factor * (1.0f - lrCoeff) * tmp);
+                tmp = (GetMaximumY() - GetMinimumY()) * postScaler;
+                SetMinimumY(GetMinimumY() - factor * (1.0f - btCoeff) * tmp);
+                SetMaximumY(GetMaximumY() + factor * btCoeff * tmp);
+            }
         }
         public void Move(float offsetX, float offsetY) {
-            minX += offsetX;
-            maxX += offsetX;
-            minY += offsetY;
-            maxY += offsetY;
+            SetMinimumX(GetMinimumX() + offsetX);
+            SetMaximumX(GetMaximumX() + offsetX);
+            SetMinimumY(GetMinimumY() + offsetY);
+            SetMaximumY(GetMaximumY() + offsetY);
         }
+        //private variables
+        private float minX;
+        private float maxX;
+        private float minY;
+        private float maxY;
     };
 
     private static class ChartRectangle {
@@ -847,8 +883,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
 
     private boolean areaFlag;    
     private static final String NOTHING_TO_SHOW_MSG = "nothing to show";
-    private static final ChartLimits DEFAULT_CHART_LIMITS = new ChartLimits(
-        Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY);
+
     private ChartLimits currentLimits;
     private ChartLimits originalLimits;
 

@@ -242,5 +242,49 @@ public class FastChartTest {
         } catch(Exception ex) {
             fail("The test failed.");
         }
-    }    
+    }
+
+    /**
+     * Test scale limits, of class FastChart.
+     */
+    @Test
+    public void testScaleLimits() {
+        System.out.println("Test of scaling of chart limits");
+        
+        final int size = 20;
+        float x, step;
+                
+        ArrayList<XY<Float>> points1 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
+        for(int i = 0; i < size + 1; i++) {
+            points1.add(new XY<>(x, (float)Math.sin(x * 3.0f)));
+            x += step;
+        }
+        
+        ArrayList<XY<Float>> points2 = new ArrayList<>(size + 1);
+        step = (float)(2.0f * Math.PI) / size;
+        x = -(float)Math.PI;
+        for(int i = 0; i < size + 1; i++) {
+            points2.add(new XY<>(x, -1.0f + (float)Math.cos(2 * x)));
+            x += step;
+        }
+
+        try {
+            FastChart myChart = new FastChart();
+            myChart.sync(points1, points2);
+
+            myChart.setTitle("Scale limits test");
+            myChart.setAreaFlag(false);
+
+            myChart.ScaleLimits(1.1f, 1.1f, 1.1f, 1.1f);
+            myChart.setDescription(0, "scaling1");
+            myChart.setDescription(1, "scaling2");
+
+            myChart.setVisible(true);
+            showChart(myChart);
+        } catch(Exception ex) {
+            fail("The test failed.");
+        }
+    }
 }
