@@ -176,6 +176,9 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         graphics = new ArrayList();
         descriptions = new ArrayList();
         for (ArrayList<XY<Float>> arrayXY : points) {
+            if(arrayXY == null) {
+                continue;
+            }
             graphicColors.add(Color.getHSBColor((float)Math.random(),
                     0.3f + (float)Math.random() * 0.5f, 0.3f + (float)Math.random() * 0.5f));
             graphics.add(arrayXY);
@@ -336,7 +339,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
             FixBorders();
             repaint(chartRectangle.GetPaddingLeft(), chartRectangle.GetPaddingTop(),
                 chartRectangle.GetWidth() - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight()),
-                chartRectangle.GetHeight() - (chartRectangle.GetPaddingTop() + chartRectangle.GetPaddingTop()));
+                chartRectangle.GetHeight() - (chartRectangle.GetPaddingBottom() + chartRectangle.GetPaddingTop()));
         }
         else {
             bMouseDraggedEvent = true;
@@ -358,7 +361,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
             && newSelectedPoint.point_number != currentSelectedPoint.point_number) {
             repaint(chartRectangle.GetPaddingLeft(), chartRectangle.GetPaddingTop(),
                 chartRectangle.GetWidth() - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight()),
-                chartRectangle.GetHeight() - (chartRectangle.GetPaddingTop() + chartRectangle.GetPaddingTop()));
+                chartRectangle.GetHeight() - (chartRectangle.GetPaddingBottom() + chartRectangle.GetPaddingTop()));
         }
         currentSelectedPoint = newSelectedPoint;
     }
@@ -721,7 +724,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         if(graphics != null) {
             g.setClip(tmp_rect.GetPaddingLeft(), tmp_rect.GetPaddingTop(),
                 tmp_rect.GetWidth() - (tmp_rect.GetPaddingLeft() + tmp_rect.GetPaddingRight()),
-                tmp_rect.GetHeight() - (tmp_rect.GetPaddingTop() + tmp_rect.GetPaddingTop()));
+                tmp_rect.GetHeight() - (tmp_rect.GetPaddingBottom() + tmp_rect.GetPaddingTop()));
             if(!areaFlag) {
                 plot(g, tmp_rect);
             } else {
