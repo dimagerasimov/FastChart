@@ -354,7 +354,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         mouseX = e.getX();
         mouseY = e.getY();
         
-        SelectedPointInfo newSelectedPoint = FindSelectedPoint(chartRectangle);
+        SelectedPointInfo newSelectedPoint = FindSelectedPoint();
         if(newSelectedPoint != null && currentSelectedPoint == null ||
            newSelectedPoint == null && currentSelectedPoint != null ||
            newSelectedPoint != null && currentSelectedPoint != null
@@ -398,54 +398,41 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
         scaler = newScaler;
     }
 
-    private static SelectedPointInfo SelectedPointSearchAlgorithm(
+    private SelectedPointInfo SelectedPointSearchAlgorithm(
         ArrayList<XY<Float>> points, float mouseX, float mouseY, float maxDistance) {
-        //Line search. Most likely the algorithm will be improved in future
-        float distance;
-        boolean bSelected = false;
+        final int widthOfPlot = chartRectangle.GetWidth() - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight());
+        final int heightOfPlot = chartRectangle.GetHeight() - (chartRectangle.GetPaddingBottom() + chartRectangle.GetPaddingTop());
+        //Lineary search. Most likely the algorithm will be improved in future
+        float distance, x, y;
         SelectedPointInfo selectedPoint = new SelectedPointInfo();
+        selectedPoint.distance = Float.MAX_VALUE;
         for(int i = 0; i < points.size(); i++) {
-            distance = (float)Math.sqrt(
-                    (mouseX - points.get(i).x) * (mouseX - points.get(i).x)
-                    + (mouseY - points.get(i).y) * (mouseY - points.get(i).y));
-            if(bSelected) {
-                if(distance > selectedPoint.distance) {
-                    break;
-                }
-                else {
-                    selectedPoint.point_number = i;
-                    selectedPoint.distance = distance;
-                }
-            }
-            else if(distance < maxDistance) {
+            x = convertXToScreenPx(widthOfPlot, points.get(i).x);
+            y = convertYToScreenPx(heightOfPlot, points.get(i).y);
+            distance = (float)Math.sqrt((mouseX - x) * (mouseX - x) + (mouseY - y) * (mouseY - y));
+            if(distance < selectedPoint.distance) {
                 selectedPoint.point_number = i;
                 selectedPoint.distance = distance;
-                bSelected = true;
             }
         }
-        if(!bSelected) {
+        if(selectedPoint.distance > maxDistance) {
             selectedPoint = null;
         }
         return selectedPoint;
     }
     
-    private SelectedPointInfo FindSelectedPoint(ChartRectangle rectangle) {
-        final int widthOfPlot = rectangle.GetWidth() - (rectangle.GetPaddingLeft() + rectangle.GetPaddingRight());
-        final int heightOfPlot = rectangle.GetHeight() - (rectangle.GetPaddingBottom() + rectangle.GetPaddingTop());
+    private SelectedPointInfo FindSelectedPoint() {
+        final int widthOfPlot = chartRectangle.GetWidth() - (chartRectangle.GetPaddingLeft() + chartRectangle.GetPaddingRight());
+        final int heightOfPlot = chartRectangle.GetHeight() - (chartRectangle.GetPaddingBottom() + chartRectangle.GetPaddingTop());
         
-        int mousePositionX = mouseX - rectangle.GetPaddingLeft();
-        int mousePositionY = mouseY - rectangle.GetPaddingTop();
+        int mousePositionX = mouseX - chartRectangle.GetPaddingLeft();
+        int mousePositionY = mouseY - chartRectangle.GetPaddingTop();
         if(mousePositionX < 0 || mousePositionX >= widthOfPlot || mousePositionY < 0 || mousePositionY >= heightOfPlot) {
             return null;
         }
-        float graphCoordX = convertScreenPxToX(widthOfPlot, mousePositionX);
-        float graphCoordY = convertScreenPxToY(heightOfPlot, mousePositionY);
-
+        
         final int size = graphics.size();
- 
-        float maxDistance = (currentLimits.maxX - currentLimits.minX) < (currentLimits.maxY - currentLimits.minY)
-            ? (currentLimits.maxX - currentLimits.minX) : (currentLimits.maxY - currentLimits.minY);
-        maxDistance *= 0.05f;
+        float maxDistance = 20; //20 pixels
         SelectedPointInfo[] selectedPoints = new SelectedPointInfo[size];
         for(int i = 0; i < size; i++) {
             ArrayList<XY<Float>> points = graphics.get(i);
@@ -454,7 +441,7 @@ public class FastChart extends JPanel implements MouseMotionListener, MouseWheel
                 //We can't draw what doesn't exist
                 continue;
             }
-            selectedPoints[i] = SelectedPointSearchAlgorithm(points, graphCoordX, graphCoordY, maxDistance);
+            selectedPoints[i] = SelectedPointSearchAlgorithm(points, mousePositionX, mousePositionY, maxDistance);
             if(selectedPoints[i] != null) {
                 selectedPoints[i].graphic_number = i;
             }
